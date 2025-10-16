@@ -1,0 +1,3 @@
+name: lambda-scaling-project
+runtime: python
+description: A simple AWS Lambda function deployed with Pulumi
