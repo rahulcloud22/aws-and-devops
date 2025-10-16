@@ -11,6 +11,32 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+venv/
+.env/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.python-version
+poetry.lock
+__pypackages__/
+
+# Pulumi
+.pulumi/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 
 # macOS
 .DS_Store
