@@ -1,0 +1,67 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: efs-dynamic-sc
+provisioner: efs.csi.aws.com
+reclaimPolicy: Delete # optional default is Delete
+parameters:
+  provisioningMode: efs-ap
+  fileSystemId: fs-05bFIS-ID
+  directoryPerms: "750" # Required. remaining optional
+  basePath: "/efs" #Root directory path /pvc-random-id /efs/pvc-id
+  subPathPattern: "${.PVC.namespace}/${.PVC.name}"
+
+# volumeBindingMode: Immediate - Immediately create EFS volume on PVC creation
+# UserID (uid):  50000 (generated) Any pod mounting this EFS Access Point will behave as: this uid
+# GroupID (gid): 50000 Even if the container runs as root (uid=0), EFS maps/force it to uid 50000
+
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efs-dynamic-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-dynamic-sc
+  resources:
+    requests:
+      storage: 5Gi # EFS is elastic, so size is not strictly required 
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: efs-dynamic-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: efs-dynamic-deploy
+  template:
+    metadata:
+      labels:
+        app: efs-dynamic-deploy
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - efs-dynamic-deploy
+            topologyKey: kubernetes.io/hostname
+      volumes:
+      - name: efs-volume
+        persistentVolumeClaim:
+          claimName: efs-dynamic-pvc
+      containers:
+      - name: app
+        image: busybox
+        command: ["sh", "-c", "sleep 3600"]
+        volumeMounts:
+        - name: efs-volume
+          mountPath: /data

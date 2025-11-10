@@ -1,0 +1,63 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: fsx-sc
+provisioner: fsx.csi.aws.com
+parameters:
+  subnetId: subnet-id
+  securityGroupIds: sg-id
+  deploymentType: PERSISTENT_1 #Scratch for temporary, Persistent for long term
+  perUnitStorageThroughput: "50"
+  fileSystemTypeVersion: '2.12'
+  extraTags: "Name=fsx-eks-volume,cluster=rahul-eks-cluster,created_by=fsx_csi_driver"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fsx-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: fsx-sc
+  resources:
+    requests:
+      storage: 1200Gi # Minimum 1200GiB for PERSISTENT_1 deployment type
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fsx-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fsx-deploy
+  template:
+    metadata:
+      labels:
+        app: fsx-deploy
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - fsx-deploy
+            topologyKey: kubernetes.io/hostname
+      volumes:
+      - name: fsx-volume
+        persistentVolumeClaim:
+          claimName: fsx-pvc
+      containers:
+      - name: app
+        image: busybox
+        command: ["sh", "-c", "sleep 3600"]
+        volumeMounts:
+        - name: fsx-volume
+          mountPath: /data

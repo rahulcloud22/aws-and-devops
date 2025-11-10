@@ -1,5 +1,5 @@
 locals {
-  application_name = var.application_name != "eks" ? "${var.application_name}-eks" : var.application_name
+  application_name = strcontains(var.application_name, "eks") ? var.application_name : "${var.application_name}-eks"
 }
 
 resource "aws_iam_role" "cluster_role" {

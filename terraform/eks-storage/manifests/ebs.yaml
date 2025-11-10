@@ -1,0 +1,58 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ebs-sc
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  fsType: ext4
+reclaimPolicy: Delete # Retain -Keeps the volume in AWS after PVC is deleted. PV object remains with RELEASED state
+# kubectl patch pv <pv-name> -p '{"spec":{"claimRef": null}}' --type=merge ; to use for new pvc as old pvc info does not apply
+volumeBindingMode: WaitForFirstConsumer #Immediate - Creates before any Pod exists. AZ is chosen without knowing where the Pod will run
+allowedTopologies:
+- matchLabelExpressions:
+  - key: topology.kubernetes.io/zone
+    values:
+    - us-east-1a
+    - us-east-1b
+    - us-east-1c
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ebs-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: ebs-sc
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ebs-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ebs-deploy
+  template:
+    metadata:
+      labels:
+        app: ebs-deploy
+    spec:
+      volumes:
+      - name: ebs-volume
+        persistentVolumeClaim:
+          claimName: ebs-pvc
+      containers:
+      - name: app
+        image: busybox
+        command: ["sh", "-c", "sleep 3600"]
+        volumeMounts:
+        - name: ebs-volume
+          mountPath: /data

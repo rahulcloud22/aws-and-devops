@@ -1,0 +1,73 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: efs-static-sc
+provisioner: efs.csi.aws.com
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: efs-static-pv
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: efs-static-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: fs-05bFIS-ID:/efs
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efs-static-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-static-sc
+  resources:
+    requests:
+      storage: 5Gi
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: efs-static-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: efs-static-deploy
+  template:
+    metadata:
+      labels:
+        app: efs-static-deploy
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - efs-static-deploy
+            topologyKey: kubernetes.io/hostname
+      volumes:
+      - name: efs-volume
+        persistentVolumeClaim:
+          claimName: efs-static-pvc
+      containers:
+      - name: app
+        image: busybox
+        command: ["sh", "-c", "sleep 3600"]
+        volumeMounts:
+        - name: efs-volume
+          mountPath: /data

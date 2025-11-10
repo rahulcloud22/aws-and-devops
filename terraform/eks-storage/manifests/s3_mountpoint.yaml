@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: s3-pv
+spec:
+  capacity:
+    storage: 1Gi #Ignored required by kubernetes
+  accessModes:
+    - ReadWriteMany
+  mountOptions:
+    - allow-delete
+    - prefix eks-pod-data/ # will create this folder inside bucket and mount
+  csi:
+    driver: s3.csi.aws.com
+    volumeHandle: s3-csi-driver-volume
+    volumeAttributes:
+      bucketName: bucket-name
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: s3-pv
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s3-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: s3-deploy
+  template:
+    metadata:
+      labels:
+        app: s3-deploy
+    spec:
+      volumes:
+      - name: s3-volume
+        persistentVolumeClaim:
+          claimName: s3-pvc
+      containers:
+      - name: app
+        image: busybox
+        command: ["sh", "-c", "sleep 3600"]
+        volumeMounts:
+        - name: s3-volume
+          mountPath: /data
