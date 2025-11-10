@@ -13,6 +13,11 @@ output "id" {
  value       = aws_eks_cluster.cluster.id 
 }
 
+output "cluster_name" {
+ description = "The name of the EKS cluster"
+ value       = aws_eks_cluster.cluster.id 
+}
+
 output "cluster_arn" {
   description = "The ARN of the EKS cluster"
   value       = aws_eks_cluster.cluster.arn
@@ -27,4 +32,12 @@ output "name" {
   description = "The namespace for the EKS cluster"
   value       = aws_eks_cluster.cluster.name
   
+}
+output "oidc_url" {
+  description = "The OIDC issuer URL for the EKS cluster"
+  value = aws_eks_cluster.cluster.identity[0].oidc[0].issuer
+}
+output "cluster_security_group_id" {
+  description = "The security group ID for the EKS cluster"
+  value = aws_eks_cluster.cluster.vpc_config[0].cluster_security_group_id
 }
