@@ -1,0 +1,43 @@
+{
+  "headers": {
+    "Host": "df123456.execute-api.us-east-1.amazonaws.com",
+    "x-api-key": "",
+    "X-Forwarded-For": "",
+    "x-restapi": ""
+  },
+  "multiValueHeaders": {
+    "Host": [
+      "df123456.execute-api.us-east-1.amazonaws.com"
+    ],
+    "x-api-key": [
+      ""
+    ],
+    "X-Forwarded-For": [
+      ""
+    ],
+    "x-restapi": [
+      ""
+    ]
+  },
+  "requestContext": {
+    "routeKey": "$disconnect",
+    "disconnectStatusCode": 1005,
+    "eventType": "DISCONNECT",
+    "extendedRequestId": "XYhmvEh2IAMEOoA=",
+    "requestTime": "18/Nov/2025:13:41:11 +0000",
+    "messageDirection": "IN",
+    "disconnectReason": "Client-side close frame status not set",
+    "stage": "dev",
+    "connectedAt": 1468743833436,
+    "requestTimeEpoch": 1468743833436,
+    "identity": {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "sourceIp": "1.1.1.1"
+    },
+    "requestId": "XYhmvEh2IAMEOoA=",
+    "domainName": "df123456.execute-api.us-east-1.amazonaws.com",
+    "connectionId": "XYg9FcMNoAMCLuQ=",
+    "apiId": "df123456"
+  },
+  "isBase64Encoded": false
+}

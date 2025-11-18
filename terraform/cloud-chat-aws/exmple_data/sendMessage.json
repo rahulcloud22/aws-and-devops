@@ -1,0 +1,27 @@
+{
+  "requestContext": {
+    "routeKey": "sendMessage",
+    "messageId": "XYiB5dhpIAMCJNw=",
+    "eventType": "MESSAGE",
+    "extendedRequestId": "XYiB5GeGIAMEjig=",
+    "requestTime": "18/Nov/2025:13:44:05 +0000",
+    "messageDirection": "IN",
+    "stage": "dev",
+    "connectedAt": 1468743833436,
+    "requestTimeEpoch": 1468743833436,
+    "identity": {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "sourceIp": "1.1.1.1"
+    },
+    "requestId": "XYiB5GeGIAMEjig=",
+    "domainName": "df123456.execute-api.us-east-1.amazonaws.com",
+    "connectionId": "XYiACde7oAMCJNw=",
+    "apiId": "df123456"
+  },
+  "body": {
+    "action": "sendMessage",
+    "message": "Hello, Hi from Rahul",
+    "sender": "rahul"
+  },
+  "isBase64Encoded": false
+}
