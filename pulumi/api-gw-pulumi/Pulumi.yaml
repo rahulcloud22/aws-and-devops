@@ -1,0 +1,11 @@
+name: api-gateway-pulumi
+description: Pulumi AWS Project in Python
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-python
