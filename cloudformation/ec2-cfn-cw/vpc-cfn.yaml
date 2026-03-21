@@ -1,0 +1,195 @@
+AWSTemplateFormatVersion : "2010-09-09"
+Parameters:
+  ApplicationName: 
+    Type: String
+    Description: The application or the project name
+  CidrBlock:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: The application or the project name
+  EnvironmentName:
+    Type: String
+    Default: ""
+    Description: Name of the deployment environment
+Conditions:
+  EnvNameProvided: !Not [!Equals [!Ref EnvironmentName, "" ]]
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref CidrBlock
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'vpc-${ApplicationName}-${EnvironmentName}', !Sub 'vpc-${ApplicationName}']
+  PublicSubnetA:
+      Type: AWS::EC2::Subnet
+      Properties:
+        MapPublicIpOnLaunch: true
+        AvailabilityZone: !Select [0, !GetAZs us-east-1]
+        CidrBlock: "10.0.1.0/24"
+        VpcId: !GetAtt VPC.VpcId
+        Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'public-subnet-a-${ApplicationName}-${EnvironmentName}', !Sub 'public-subnet-a-${ApplicationName}']
+  PublicSubnetB:
+      Type: AWS::EC2::Subnet
+      Properties:
+        MapPublicIpOnLaunch: true
+        AvailabilityZone: !Select [1, !GetAZs us-east-1]
+        CidrBlock: "10.0.2.0/24"
+        VpcId: !GetAtt VPC.VpcId
+        Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'public-subnet-b-${ApplicationName}-${EnvironmentName}', !Sub 'public-subnet-b-${ApplicationName}']
+  PublicSubnetC:
+      Type: AWS::EC2::Subnet
+      Properties:
+        MapPublicIpOnLaunch: true
+        AvailabilityZone: !Select [2, !GetAZs us-east-1]
+        CidrBlock: "10.0.3.0/24"
+        VpcId: !GetAtt VPC.VpcId
+        Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'public-subnet-c-${ApplicationName}-${EnvironmentName}', !Sub 'public-subnet-c-${ApplicationName}']
+  PrivateSubnetA:
+      Type: AWS::EC2::Subnet
+      Properties:
+        MapPublicIpOnLaunch: false
+        AvailabilityZone: !Select [0, !GetAZs us-east-1]
+        CidrBlock: "10.0.10.0/24"
+        VpcId: !GetAtt VPC.VpcId
+        Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'private-subnet-a-${ApplicationName}-${EnvironmentName}', !Sub 'public-subnet-a-${ApplicationName}']
+  PrivateSubnetB:
+      Type: AWS::EC2::Subnet
+      Properties:
+        MapPublicIpOnLaunch: false
+        AvailabilityZone: !Select [1, !GetAZs us-east-1]
+        CidrBlock: "10.0.11.0/24"
+        VpcId: !GetAtt VPC.VpcId
+        Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'private-subnet-b-${ApplicationName}-${EnvironmentName}', !Sub 'public-subnet-b-${ApplicationName}']
+  PrivateSubnetC:
+      Type: AWS::EC2::Subnet
+      Properties:
+        MapPublicIpOnLaunch: false
+        AvailabilityZone: !Select [2, !GetAZs us-east-1]
+        CidrBlock: "10.0.12.0/24"
+        VpcId: !GetAtt VPC.VpcId
+        Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'private-subnet-c-${ApplicationName}-${EnvironmentName}', !Sub 'public-subnet-c-${ApplicationName}']
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+        Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'igw-${ApplicationName}-${EnvironmentName}', !Sub 'igw-${ApplicationName}']
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+  NatEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'eip-${ApplicationName}-${EnvironmentName}', !Sub 'eip-${ApplicationName}']
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEIP.AllocationId
+      SubnetId: !Ref PrivateSubnetA
+      Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'nat-${ApplicationName}-${EnvironmentName}', !Sub 'nat-${ApplicationName}']
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+          - Key: Name
+            Value: !If [EnvNameProvided,!Sub 'public-rt-${ApplicationName}-${EnvironmentName}', !Sub 'public-rt-${ApplicationName}']
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+  PublicSubnetARouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetA
+  PublicSubnetBRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetB
+  PublicSubnetCRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetC
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+          - Key: Name
+            Value: !If [EnvNameProvided,!Sub 'private-rt-${ApplicationName}-${EnvironmentName}', !Sub 'private-rt-${ApplicationName}']
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      NatGatewayId: !Ref NatGateway
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+  PrivateSubnetARouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnetA
+  PrivateSubnetBRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnetB
+  PrivateSubnetCRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnetC
+
+
+Outputs:
+  StackName:
+    Description: Stack Name
+    Value: !Ref AWS::StackName
+  VpcId:
+    Description: ID of the VPC
+    Value: !GetAtt VPC.VpcId
+    Export:
+      Name: !Sub "${AWS::StackName}::VPC"
+  PublicSubnetAId:
+    Description: ID of the Public Subnet A
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}::PublicSubnetA"
+  PrivateSubnetAId:
+    Description: ID of the Private Subnet A
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnetA-ID"
+  EnvironmentName:
+    Description: Name of the environment deployed 
+    Value: !Ref EnvironmentName
+    Condition: EnvNameProvided
+  EIP:
+    Description: ID of the EIP
+    Value: !Ref NatEIP
