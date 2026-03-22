@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion : "2010-09-09"
+Parameters:
+  ApplicationName: 
+    Type: String
+    Description: The application or the project name
+  InstanceType:
+    Type: String
+    Default: "t3.micro"
+    Description: The application or the project name
+  Image:  
+    Type: String
+    AllowedValues:
+    - ubuntu
+    - amazonlinux
+  EnvironmentName:
+    Type: String
+    Default: ""
+    Description: Name of the deployment environment
+  IpAddressSSH:
+    Type: String
+    Default: ""
+    Description: Name of the deployment environment
+  KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: ""
+    Description: Name of the deployment environment
+Conditions:
+  EnvNameProvided: !Not [!Equals [!Ref EnvironmentName, "" ]]
+  AllowSSh: !Not [!Equals [!Ref IpAddressSSH, "" ]]
+
+Mappings:
+  AMIMap:
+    us-east-1:
+        ubuntu: "ami-04a81a99f5ec58529"
+        amazonlinux: "ami-0b72821e2f351e396"
+
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://rahul-s3-storage.s3.amazonaws.com/cfn-templates/vpc-cfn.yaml
+      Parameters:
+        ApplicationName: !Ref ApplicationName
+        EnvironmentName: !If [EnvNameProvided,!Ref EnvironmentName, ""]
+      
+  EC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !FindInMap [AMIMap,!Ref AWS::Region,!Ref Image]
+      SubnetId: 
+        Fn::GetAtt: 
+          - VPCStack
+          - Outputs.PublicSubnetAId
+      KeyName: !Ref KeyPair
+      SecurityGroupIds:
+      - !Ref SecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+             #!/bin/bash -xe
+             yum update -y aws-cfn-bootstrap
+             /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource EC2 --region ${AWS::Region}
+             # Start cfn-signal to the wait condition
+             /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource WaitCondition --region ${AWS::Region}
+      Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'ec2-${ApplicationName}-${EnvironmentName}-${AWS::Region}', !Sub 'ec2-${ApplicationName}-${AWS::Region}']
+
+    Metadata:
+      Comment: Install a simple Apache HTTP page
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              httpd: []
+          files:
+            "/var/www/html/index.html":
+              content: |
+                <h1>Hello World from EC2 instance!</h1>
+                <p>This was created using cfn-init</p>
+              mode: '000644'
+          commands:
+            hello:
+              command: "echo 'hello world'"
+          services:
+            sysvinit:
+              httpd:
+                enabled: 'true'
+                ensureRunning: 'true'
+  
+  WaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT3M
+        Count: 1
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !If [EnvNameProvided,!Sub 'group-${ApplicationName}-${EnvironmentName}', !Sub 'group-${ApplicationName}']
+      GroupDescription: !Sub 'Security Group for ${AWS::StackName}'
+      VpcId: !GetAtt [VPCStack, Outputs.VpcId]
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: "0.0.0.0/0"
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: !Sub '${IpAddressSSH}'
+      Tags:
+        - Key: Name
+          Value: !If [EnvNameProvided,!Sub 'sg-${ApplicationName}-${EnvironmentName}-${AWS::Region}', !Sub 'sg-${ApplicationName}-${AWS::Region}']
+
+Outputs:
+  EC2PIP:
+    Description: Public IP of the EC2 Instance
+    Value: !GetAtt EC2.PublicIp
+  EC2ID:
+    Value: !Ref EC2
+    Description: ID of the EC2 Instance
