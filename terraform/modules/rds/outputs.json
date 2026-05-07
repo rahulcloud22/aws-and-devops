@@ -1,0 +1,70 @@
+{
+  "db_endpoint": {
+    "sensitive": false,
+    "type": "string",
+    "value": "rahul-test.cwis7t1js.us-east-1.rds.amazonaws.com:3306"
+  },
+  "db_url": {
+    "sensitive": false,
+    "type": "string",
+    "value": "rahul-test.cwis7t1js.us-east-1.rds.amazonaws.com"
+  },
+  "master_user_secret": {
+    "sensitive": false,
+    "type": [
+      "list",
+      [
+        "object",
+        {
+          "kms_key_id": "string",
+          "secret_arn": "string",
+          "secret_status": "string"
+        }
+      ]
+    ],
+    "value": [
+      {
+        "kms_key_id": "arn:aws:kms:us-east-1:12345:key/00d21b93-25bb-4b88-bc20-422edfsd3e513",
+        "secret_arn": "arn:aws:secretsmanager:us-east-1:12345:secret:rds!db-0a1f52a8-3625-41e4-b4c8-301sd963fcf1fa-wITC9u",
+        "secret_status": "active"
+      }
+    ]
+  },
+  "private_subnet_ids": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "subnet-09f8ea4bb4e22e",
+      "subnet-0efba672af501b",
+      "subnet-0c25769d3ff2b1"
+    ]
+  },
+  "public_subnet_ids": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "subnet-09a73a1e5d006a",
+      "subnet-0f01022eaw8cc6",
+      "subnet-029c0b9ce39a31"
+    ]
+  },
+  "vpc_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "vpc-04620d1b871ba46f3"
+  }
+}
