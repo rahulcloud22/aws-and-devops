@@ -1,6 +1,14 @@
 locals {
   application = var.application_name
   common_tags = var.tags
+  eks_subnet_tags = {
+    public = {
+      "kubernetes.io/role/elb" = 1
+    }
+    private = {
+      "kubernetes.io/role/internal-elb" = 1
+    }
+  }
   availability_zones = {
     1 = "a"
     2 = "b"
@@ -24,7 +32,7 @@ resource "aws_subnet" "public_subnets" {
   map_public_ip_on_launch = true
   tags = merge({
     Name = "public-subnet-${each.value}-${local.application}"
-  }, local.common_tags)
+  }, local.common_tags, var.eks_vpc ? local.eks_subnet_tags["public"] : {})
 }
 
 resource "aws_subnet" "private_subnets" {
@@ -34,7 +42,7 @@ resource "aws_subnet" "private_subnets" {
   availability_zone = "${data.aws_region.current.region}${each.value}"
   tags = merge({
     Name = "private-subnet-${each.value}-${local.application}"
-  }, local.common_tags)
+  }, local.common_tags, var.eks_vpc ? local.eks_subnet_tags["private"] : {})
 }
 
 resource "aws_internet_gateway" "igw" {
@@ -52,7 +60,7 @@ resource "aws_eip" "eip" {
 
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.eip.id
-  subnet_id     = aws_subnet.private_subnets[1].id
+  subnet_id     = aws_subnet.public_subnets[1].id
   tags = merge({
     Name = "ngw-${local.application}"
   }, local.common_tags)
