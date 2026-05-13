@@ -7,5 +7,10 @@ variable "vpc_cidr" {
   default = "10.0"
 }
 
+variable "eks_vpc" {
+  type    = bool
+  default = false
+}
+
 variable "tags" {
 }
