@@ -52,6 +52,14 @@ module "eks" {
       instance_types = ["t3.medium"]
       ssh_key_name   = "${var.application_name}-ssh-keypair"
     }
+    qa = {
+      desired_size   = 1
+      min_size       = 1
+      max_size       = 2
+      subnet_ids     = module.vpc.private_subnet_ids
+      instance_types = ["t3.medium"]
+      ssh_key_name   = "${var.application_name}-ssh-keypair"
+    }
   }
 }
 
@@ -63,4 +71,86 @@ resource "aws_ecr_repository" "repository" { #ECR Repository (${var.application_
     filter      = "latest*"
     filter_type = "WILDCARD"
   }
+}
+
+resource "aws_cognito_user_pool" "pool" {
+  name                     = "${var.application_name}-cognito-user-pool"
+  username_attributes      = ["email"]
+  auto_verified_attributes = [] # auto_verified_attributes = ["email"] this auto-sends verification email to complete signup
+  tags                     = var.tags
+  lambda_config {
+    pre_sign_up = aws_lambda_function.pre_signup.arn
+  }
+}
+
+resource "aws_cognito_user_pool_client" "this" {
+  name                                 = "local-webapp-client"
+  user_pool_id                         = aws_cognito_user_pool.pool.id
+  generate_secret                      = false
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows = [
+    "code" #means the app gets a temporary authorization code after login, which it exchanges for tokens in a secure way
+  ]
+  allowed_oauth_scopes = [
+    "openid", #With openid, Cognito issues an ID token, which your app can use to know the user’s identity securely.
+    "email",
+    "profile"
+  ]
+  supported_identity_providers = [
+    "COGNITO"
+  ]
+  callback_urls = [
+    "http://localhost:3000/callback", #After a user logs in, Cognito redirects them back to your app at http://localhost:3000/callback
+  ]
+  logout_urls = [
+    "http://localhost:3000/",
+  ]
+  explicit_auth_flows = [
+    "ALLOW_USER_PASSWORD_AUTH", #Users can sign in with their username and password directly, without using the SRP protocol.
+    "ALLOW_USER_SRP_AUTH",      #Users can sign in with their username and password using Cognito’s secure SRP protocol.
+    "ALLOW_REFRESH_TOKEN_AUTH"  #The app can use refresh tokens to keep users logged in without asking for their password again.
+  ]
+}
+
+data "archive_file" "pre_signup_zip" {
+  type        = "zip"
+  source_file = "${path.module}/scripts/cognito_lambda.js"
+  output_path = "${path.module}/scripts/cognito_lambda.zip"
+}
+
+resource "aws_lambda_permission" "allow_cognito" {
+  statement_id  = "AllowCognitoInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.pre_signup.function_name
+  principal     = "cognito-idp.amazonaws.com"
+  source_arn    = aws_cognito_user_pool.pool.arn
+}
+
+resource "aws_lambda_function" "pre_signup" {
+  function_name    = "${var.application_name}-cognito-lambda"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "cognito_lambda.handler"
+  runtime          = "nodejs18.x"
+  filename         = "${path.module}/scripts/cognito_lambda.zip"
+  source_code_hash = data.archive_file.pre_signup_zip.output_base64sha256
+}
+
+resource "aws_iam_role" "lambda_role" {
+  name = "${var.application_name}-lambda-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic_logs" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
